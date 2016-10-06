@@ -1,0 +1,147 @@
+#!/usr/bin/perl -w
+
+use strict;
+use Getopt::Long;
+
+my @configArray;
+my $dbgFlag = 0;
+
+sub doHelp(;$) {
+    my ($errMsg) = @_;
+    if ($errMsg) {
+        print "error: $errMsg\n";
+    }
+    print STDERR <<'HELP';
+----------------------------------------------------------------
+cb - copy buddy
+----------------------------------------------------------------
+
+Basic Usage:
+  >> ./cb /path/to/config
+
+Example:
+  >> cb /home/jonbri/work/grr/.cb
+
+Format for config file:
+
+/path/to/src
+/path/to/deployment
+  file1
+  file2
+
+/path/to/src1
+/path/to/deployment
+  file3
+  file4
+
+HELP
+exit 1;
+};
+
+##########
+# general util
+sub runCommand($) {
+    my ($command) = @_;
+
+    open CMD, "$command |" || die "Unable to run $command: $!";
+    my @output = <CMD>;
+    close CMD;
+
+    return @output;
+}
+
+sub copy($$) {
+    my ($arg1, $arg2) = @_;
+
+    if ($dbgFlag) {
+        $arg2 =~ s/\.js/-dbg\.js/;
+    }
+
+    runCommand "cp $arg1 $arg2";
+}
+
+sub copyGroup($$@) {
+    my ($sourcePrefix, $destPrefix, @files) = @_;
+    print "deploying $sourcePrefix...\n";
+
+    my($self) = @files;
+    for ( @{$self} ) {
+        #print $_ . "\n";
+        #print "$sourcePrefix/$_";
+        copy "$sourcePrefix/$_", "$destPrefix/$_";
+    }
+}
+
+
+sub readConfigFile($) {
+    my ($configFile) = @_;
+
+    # the goal here is to get an array of hashes
+    my $count = 0;
+    my $subCount = 0;
+    $configArray[0]{'files'} = [];
+
+    my ($key, $value);
+    open(my $fh, '<', $configFile) or die 'Could not open config file';
+    while (<$fh>) {
+        chomp;
+        next if /^\s*#/;
+
+        if (/^$/) {
+            $count++;
+            $subCount = 0;
+            $configArray[$count]{'files'} = [];
+        } elsif (/  /) {
+            my $file = $_;
+            $file =~ s/^\s+//;
+            push @{$configArray[$count]{'files'}}, $file;
+        } else {
+            if ($subCount == 0 ) {
+                $configArray[$count]{'src'} = $_;
+            } else {
+                $configArray[$count]{'dest'} = $_;
+            }
+            $subCount++;
+        }
+    }
+    close $fh;
+}
+
+sub performCopy() {
+    for (@configArray) {
+        my %h = %$_;
+        my $src = $h{'src'};
+        my $dest = $h{'dest'};
+        my @files = $h{'files'};
+
+        copyGroup($src, $dest, @files);
+    }
+}
+
+##########
+# main
+MAIN: {
+    my ($help, $full, $normal, $check);
+
+    my $configFile=$ARGV[0];
+    $configFile or doHelp "need config file";
+
+    my ($dbg);
+    GetOptions(
+        'help' => \$help,
+        'dbg' => \$dbg,
+    );
+
+    if ($help) {
+        doHelp();
+    }
+
+    if ($dbg) {
+        $dbgFlag = 1;
+    }
+
+    readConfigFile($configFile);
+    performCopy();
+
+    exit;
+}
