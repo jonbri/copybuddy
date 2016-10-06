@@ -12,27 +12,17 @@ sub doHelp(;$) {
         print "error: $errMsg\n";
     }
     print STDERR <<'HELP';
-----------------------------------------------------------------
-cb - copy buddy
-----------------------------------------------------------------
 
-Basic Usage:
-  >> ./cb /path/to/config
+copybuddy - batch file copying via config files
 
-Example:
-  >> cb /home/jonbri/work/grr/.cb
+Usage:
+  >> ./copybuddy /path/to/.cb
 
-Format for config file:
-
-/path/to/src
-/path/to/deployment
+Config file format:
+src dir
+dest dir
   file1
   file2
-
-/path/to/src1
-/path/to/deployment
-  file3
-  file4
 
 HELP
 exit 1;
