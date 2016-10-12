@@ -29,3 +29,6 @@ Example:
   file3
   file4
 ```
+
+## License
+[BSD-2-Clause](http://spdx.org/licenses/BSD-2-Clause)
